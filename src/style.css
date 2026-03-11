@@ -1,0 +1,30 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #000;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+#aladin-lite-div {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 1;
+}
+
+#aladin-lite-div canvas {
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+.aladin-logo {
+  display: none !important;
+}
