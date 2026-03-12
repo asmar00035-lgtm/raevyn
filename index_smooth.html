@@ -16,7 +16,6 @@
       width: 100vw;
       height: 100vh;
     }
-    /* Hide all Aladin UI */
     .aladin-location,
     .aladin-fov,
     .aladin-reticleControl,
@@ -35,6 +34,8 @@
 
   <script type="text/javascript">
     let aladin;
+    let targetFov;
+    let animating = false;
 
     A.init.then(() => {
       aladin = A.aladin('#aladin-lite-div', {
@@ -56,6 +57,39 @@
         showContextMenu:          false,
         showStatusBar:            false,
       });
+
+      targetFov = aladin.getFov()[0];
+
+      // intercept scroll and make zoom smooth
+      const div = document.getElementById('aladin-lite-div');
+
+      div.addEventListener('wheel', function(e) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        const delta = e.deltaY > 0 ? 1.08 : 0.92; // small step per scroll tick
+        targetFov = Math.min(180, Math.max(0.01, targetFov * delta));
+
+        if (!animating) {
+          animating = true;
+          smoothZoom();
+        }
+      }, { capture: true, passive: false });
+
+      function smoothZoom() {
+        const currentFov = aladin.getFov()[0];
+        const diff = targetFov - currentFov;
+
+        if (Math.abs(diff) < 0.01) {
+          aladin.setFov(targetFov);
+          animating = false;
+          return;
+        }
+
+        // ease towards target
+        aladin.setFov(currentFov + diff * 0.12);
+        requestAnimationFrame(smoothZoom);
+      }
     });
   </script>
 </body>
