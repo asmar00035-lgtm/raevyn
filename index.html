@@ -11,7 +11,7 @@ html,body{width:100%;height:100%;background:#06080f;overflow:hidden}
 #c.drag{cursor:grabbing}
 #aladin-wrap{position:absolute;top:0;left:0;width:100vw;height:100vh;display:none}
 #aladin-lite-div{width:100%;height:100%}
-#aladin-lite-div canvas{filter:blur(0.4px)}
+#aladin-lite-div #aladin-wrap canvas{filter:blur(0.4px)}
 .aladin-location,.aladin-fov,.aladin-reticleControl,.aladin-logo,.aladin-toolbar,.aladin-projControls{display:none!important}
 #vignette{position:fixed;top:0;left:0;width:100vw;height:100vh;background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,5,0.55) 100%);pointer-events:none;z-index:5}
 #labels{position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:10}
@@ -130,11 +130,12 @@ const renderer=new THREE.WebGLRenderer({canvas:cvs,antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,600);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
 camera.position.set(0,0,0);
 
 // Sky background
 scene.background=new THREE.Color(0x06080f);
+console.log("THREE scene init ok, renderer:", renderer.domElement.width, renderer.domElement.height);
 
 // 2. Milky Way — pure canvas, no external URLs
 (function(){
@@ -253,8 +254,8 @@ let bgStarsMesh, brightStarsMesh, bloomStarsMesh;
     else{col[i*3]=c3.r;col[i*3+1]=c3.g;col[i*3+2]=c3.b;}
   }
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));
-  const mat=new THREE.PointsMaterial({size:1,map:starSprite,transparent:true,opacity:0.9,vertexColors:true,sizeAttenuation:false,blending:THREE.AdditiveBlending,depthWrite:false});
-  bgStarsMesh=new THREE.Points(g,mat);scene.add(bgStarsMesh);
+  const mat=new THREE.PointsMaterial({size:1.5,map:starSprite,transparent:true,opacity:0.9,vertexColors:true,sizeAttenuation:false,alphaTest:0.01,blending:THREE.AdditiveBlending,depthWrite:false});
+  bgStarsMesh=new THREE.Points(g,mat);scene.add(bgStarsMesh);console.log("bg stars added, count:", N);
 })();
 
 // 5. Bright named stars — size by magnitude, bloom halo
@@ -266,9 +267,9 @@ let bgStarsMesh, brightStarsMesh, bloomStarsMesh;
     const b=Math.min(1,Math.max(0.6,(3-m)/5));col[i*3]=b;col[i*3+1]=Math.min(1,b*1.05);col[i*3+2]=1;
   });
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.setAttribute('size',new THREE.BufferAttribute(sizes,1));
-  const mat=new THREE.PointsMaterial({size:3.5,map:starSprite,transparent:true,opacity:0.95,vertexColors:true,sizeAttenuation:false,blending:THREE.AdditiveBlending,depthWrite:false});
+  const mat=new THREE.PointsMaterial({size:3.5,map:starSprite,transparent:true,opacity:0.95,vertexColors:true,sizeAttenuation:false,alphaTest:0.01,blending:THREE.AdditiveBlending,depthWrite:false});
   brightStarsMesh=new THREE.Points(g,mat);scene.add(brightStarsMesh);
-  const bloomMat=new THREE.PointsMaterial({size:8,map:starSprite,transparent:true,opacity:0.25,vertexColors:true,sizeAttenuation:false,blending:THREE.AdditiveBlending,depthWrite:false});
+  const bloomMat=new THREE.PointsMaterial({size:8,map:starSprite,transparent:true,opacity:0.25,vertexColors:true,sizeAttenuation:false,alphaTest:0.01,blending:THREE.AdditiveBlending,depthWrite:false});
   bloomStarsMesh=new THREE.Points(g,bloomMat);scene.add(bloomStarsMesh);
 })();
 
