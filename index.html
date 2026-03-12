@@ -180,114 +180,69 @@ renderer.setSize(innerWidth,innerHeight);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
 
-// Milky Way — photorealistic procedural
+// Milky Way — ESO/NASA equirectangular texture (multiple fallbacks)
 (function(){
-  const W=4096,H=2048;
-  const tc=document.createElement('canvas');tc.width=W;tc.height=H;
-  const tx=tc.getContext('2d');
-  tx.fillStyle='#000008';tx.fillRect(0,0,W,H);
-
-  // Galactic plane: RA→x pixel, Dec→y pixel (equirectangular)
-  // Band follows galactic latitude=0 projected onto equirectangular map
-  function bandY(px){
-    const ra=(px/W)*360;
-    // Accurate galactic plane fit in equirectangular
-    return H/2
-      + Math.sin((ra-33)*Math.PI/180)*0.595*(H/2)
-      + Math.sin((ra*2-8)*Math.PI/180)*0.085*(H/2)
-      - Math.sin((ra*0.5+20)*Math.PI/180)*0.04*(H/2);
+  const urls=[
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Milky_Way_equirectangular_-_edited.jpg/2560px-Milky_Way_equirectangular_-_edited.jpg',
+    'https://upload.wikimedia.org/wikipedia/commons/0/00/Milky_Way_equirectangular_-_edited.jpg',
+  ];
+  const loader=new THREE.TextureLoader();
+  function tryLoad(i){
+    if(i>=urls.length){ buildProcedural(); return; }
+    loader.crossOrigin='anonymous';
+    loader.load(urls[i],
+      tex=>{
+        const geo=new THREE.SphereGeometry(493,64,32);
+        const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.88,depthWrite:false});
+        const mw=new THREE.Mesh(geo,mat);
+        scene.add(mw);
+        window._mwMesh=mw;window._mwMat=mat;
+      },
+      undefined,
+      ()=>tryLoad(i+1)
+    );
   }
-
-  // Wide diffuse halo (4 passes, progressively narrower and brighter)
-  [[500,0.07,'200,215,255'],[280,0.14,'160,180,240'],[130,0.26,'120,145,220'],[55,0.42,'100,125,210'],[22,0.60,'150,165,235']].forEach(([hw,a,col])=>{
-    for(let x=0;x<W;x+=1){
-      const cy=bandY(x);
-      const g=tx.createLinearGradient(x,cy-hw,x,cy+hw);
-      g.addColorStop(0,`rgba(${col},0)`);
-      g.addColorStop(0.45,`rgba(${col},${a*0.6})`);
-      g.addColorStop(0.5,`rgba(${col},${a})`);
-      g.addColorStop(0.55,`rgba(${col},${a*0.6})`);
-      g.addColorStop(1,`rgba(${col},0)`);
-      tx.fillStyle=g;tx.fillRect(x,cy-hw,1,hw*2);
+  function buildProcedural(){
+    // High-res procedural fallback
+    const W=8192,H=4096;
+    const tc=document.createElement('canvas');tc.width=W;tc.height=H;
+    const tx=tc.getContext('2d');
+    tx.fillStyle='#000008';tx.fillRect(0,0,W,H);
+    function bY(x){
+      const ra=(x/W)*360;
+      return H/2+Math.sin((ra-33)*Math.PI/180)*0.595*(H/2)+Math.sin((ra*2-8)*Math.PI/180)*0.085*(H/2);
     }
-  });
-
-  // Galactic center bulge (RA=266.4°, Dec=-29°)
-  const gcX=(266.4/360)*W, gcY=bandY(gcX*0.99);
-  [[420,'255,235,170',0.50],[220,'255,220,140',0.65],[90,'255,245,200',0.80],[35,'255,255,220',0.90]].forEach(([r,c,a])=>{
-    const g=tx.createRadialGradient(gcX,gcY,0,gcX,gcY,r);
-    g.addColorStop(0,`rgba(${c},${a})`);g.addColorStop(0.5,`rgba(${c},${a*0.4})`);g.addColorStop(1,'rgba(0,0,0,0)');
-    tx.fillStyle=g;tx.beginPath();tx.arc(gcX,gcY,r,0,Math.PI*2);tx.fill();
-  });
-
-  // Cygnus region brightening (RA≈310°, where band is brightest in north)
-  const cyX=(310/360)*W, cyY=bandY(cyX);
-  const cyg=tx.createRadialGradient(cyX,cyY,0,cyX,cyY,260);
-  cyg.addColorStop(0,'rgba(180,200,255,0.35)');cyg.addColorStop(0.5,'rgba(140,165,240,0.15)');cyg.addColorStop(1,'rgba(0,0,0,0)');
-  tx.fillStyle=cyg;tx.beginPath();tx.arc(cyX,cyY,260,0,Math.PI*2);tx.fill();
-
-  // Dark dust lanes (Great Rift, from Cygnus toward Sagittarius)
-  for(let x=W*0.30;x<W*0.70;x+=2){
-    const cy=bandY(x);
-    const vary=Math.sin(x/80)*12+Math.sin(x/30)*5;
-    // Upper dust lane
-    [[40,0.52],[20,0.70],[8,0.82]].forEach(([hw,a])=>{
-      const g=tx.createLinearGradient(x,cy-hw+vary,x,cy+hw+vary);
-      g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(0.5,`rgba(0,0,4,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');
-      tx.fillStyle=g;tx.fillRect(x,cy-hw+vary,2,hw*2);
+    [[600,0.06,'200,215,255'],[300,0.13,'160,180,240'],[140,0.25,'120,145,220'],[60,0.40,'100,125,210'],[25,0.58,'150,165,235']].forEach(([hw,a,col])=>{
+      for(let x=0;x<W;x+=2){
+        const cy=bY(x),g=tx.createLinearGradient(x,cy-hw,x,cy+hw);
+        g.addColorStop(0,`rgba(${col},0)`);g.addColorStop(0.5,`rgba(${col},${a})`);g.addColorStop(1,`rgba(${col},0)`);
+        tx.fillStyle=g;tx.fillRect(x,cy-hw,2,hw*2);
+      }
     });
-    // Second fragmentary lane offset
-    if(x>W*0.42&&x<W*0.60){
-      const vary2=Math.sin(x/50)*8-30;
-      const g2=tx.createLinearGradient(x,cy+vary2-15,x,cy+vary2+15);
-      g2.addColorStop(0,'rgba(0,0,0,0)');g2.addColorStop(0.5,'rgba(0,0,3,0.45)');g2.addColorStop(1,'rgba(0,0,0,0)');
-      tx.fillStyle=g2;tx.fillRect(x,cy+vary2-15,2,30);
+    const gcX=(266.4/360)*W,gcY=bY(gcX);
+    [[450,'255,235,170',0.55],[200,'255,220,140',0.70],[80,'255,245,200',0.85]].forEach(([r,c,a])=>{
+      const g=tx.createRadialGradient(gcX,gcY,0,gcX,gcY,r);
+      g.addColorStop(0,`rgba(${c},${a})`);g.addColorStop(1,'rgba(0,0,0,0)');
+      tx.fillStyle=g;tx.beginPath();tx.arc(gcX,gcY,r,0,Math.PI*2);tx.fill();
+    });
+    for(let i=0;i<5000;i++){
+      const x=Math.random()*W,cy=bY(x),dy=(Math.random()-0.5)*500;
+      const d=Math.exp(-dy*dy/(2*130*130));
+      if(Math.random()>d*0.9+0.1)continue;
+      const sz=Math.random()*2+0.4,b=0.3+d*0.7,t=Math.random();
+      tx.fillStyle=t<0.55?`rgba(210,220,255,${b})`:t<0.78?`rgba(255,240,200,${b})`:`rgba(255,185,120,${b*0.7})`;
+      tx.beginPath();tx.arc(x,cy+dy,sz,0,Math.PI*2);tx.fill();
     }
+    const tex=new THREE.CanvasTexture(tc);
+    const geo=new THREE.SphereGeometry(493,64,32);
+    const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.90,depthWrite:false});
+    const mw=new THREE.Mesh(geo,mat);
+    scene.add(mw);window._mwMesh=mw;window._mwMat=mat;
   }
-
-  // Emission nebulae (H-alpha red-pink patches)
-  [
-    {x:W*0.415,dy:-5, r:110,c:'255,120,80', a:0.22},   // M8 Lagoon
-    {x:W*0.432,dy:25, r:80, c:'200,100,160',a:0.18},   // M20 Trifid
-    {x:W*0.46, dy:-8, r:130,c:'220,100,60', a:0.20},   // M17 Omega
-    {x:W*0.48, dy:10, r:95, c:'180,80,120', a:0.15},   // M16 Eagle
-    {x:W*0.215,dy:0,  r:100,c:'255,140,80', a:0.20},   // Orion/Barnard's
-    {x:W*0.54, dy:-15,r:70, c:'160,120,220',a:0.13},   // M24
-    {x:W*0.68, dy:5,  r:85, c:'120,160,240',a:0.14},   // patch north
-    {x:W*0.08, dy:0,  r:75, c:'200,160,255',a:0.12},   // Puppis region
-  ].forEach(({x,dy,r,c,a})=>{
-    const cy=bandY(x)+dy;
-    const g=tx.createRadialGradient(x,cy,0,x,cy,r);
-    g.addColorStop(0,`rgba(${c},${a})`);g.addColorStop(0.5,`rgba(${c},${a*0.4})`);g.addColorStop(1,'rgba(0,0,0,0)');
-    tx.fillStyle=g;tx.beginPath();tx.arc(x,cy,r,0,Math.PI*2);tx.fill();
-  });
-
-  // Dense star field along band
-  for(let i=0;i<3000;i++){
-    const x=Math.random()*W;
-    const cy=bandY(x);
-    const spread=250;
-    const dy=(Math.random()-0.5)*spread*2;
-    const dist=Math.abs(dy);
-    if(dist>spread*0.9&&Math.random()>0.15)continue;
-    const density=Math.exp(-dist*dist/(2*120*120));
-    if(Math.random()>density*0.92+0.08)continue;
-    const sz=Math.random()*1.8+0.3;
-    const bright=0.3+density*0.7;
-    const t=Math.random();
-    const col=t<0.55?`rgba(210,220,255,${bright})`:t<0.78?`rgba(255,240,200,${bright})`:`rgba(255,185,120,${bright*0.7})`;
-    tx.fillStyle=col;tx.beginPath();tx.arc(x,cy+dy,sz,0,Math.PI*2);tx.fill();
-  }
-
-  const tex=new THREE.CanvasTexture(tc);
-  const geo=new THREE.SphereGeometry(493,64,32);
-  const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.92,depthWrite:false});
-  const mw=new THREE.Mesh(geo,mat);
-  scene.add(mw);
-  window._mwMesh=mw;window._mwMat=mat;
+  tryLoad(0);
 })();
 
-// Star field// Star field
+// Star field// Star field// Star field
 (function(){
   const N=9000,R=500,pos=new Float32Array(N*3),col=new Float32Array(N*3);
   for(let i=0;i<N;i++){
@@ -325,17 +280,25 @@ let lineObj;
   }));
   const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pts),3));
-  const lineMat=new THREE.LineBasicMaterial({color:0x55c0d0,transparent:true,opacity:0.0});
+  const lineMat=new THREE.LineBasicMaterial({color:0x55c0d0,transparent:true,opacity:0});
   lineObj=new THREE.LineSegments(g,lineMat);
-  // Slow fade-in, then hold
-  let lineOpacity=0;
-  setTimeout(()=>{
-    const lineTimer=setInterval(()=>{
-      lineOpacity=Math.min(0.50,lineOpacity+0.006);
-      lineMat.opacity=lineOpacity;
-      if(lineOpacity>=0.50)clearInterval(lineTimer);
-    },16);
-  },400);
+  // Segment-by-segment draw animation
+  const totalSegs=pts.length/6; // each segment = 6 floats
+  let drawnSegs=0;
+  const drawInterval=setInterval(()=>{
+    drawnSegs=Math.min(totalSegs,drawnSegs+Math.ceil(totalSegs/120));
+    // Show only drawn segments by updating draw range
+    lineObj.geometry.setDrawRange(0,drawnSegs*2);
+    if(drawnSegs>=totalSegs){
+      clearInterval(drawInterval);
+      // Then fade to final opacity
+      let op=0;const fadeT=setInterval(()=>{
+        op=Math.min(0.50,op+0.015);lineMat.opacity=op;
+        if(op>=0.50)clearInterval(fadeT);
+      },16);
+    }
+  },18);
+  lineObj.geometry.setDrawRange(0,0);
   scene.add(lineObj);
 })();
 
