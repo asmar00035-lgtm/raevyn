@@ -180,42 +180,48 @@ renderer.setSize(innerWidth,innerHeight);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
 
-// Milky Way background sphere
+// Milky Way — real NASA ESO panorama texture
 (function(){
-  // Procedural milky way on canvas texture
-  const size=2048;
-  const tc=document.createElement('canvas');tc.width=size;tc.height=size/2;
-  const tx=tc.getContext('2d');
-  tx.fillStyle='#000';tx.fillRect(0,0,size,size/2);
-  // Band
-  const band=tx.createLinearGradient(0,size/4-140,0,size/4+140);
-  band.addColorStop(0,'rgba(0,0,0,0)');
-  band.addColorStop(0.3,'rgba(30,35,60,0.18)');
-  band.addColorStop(0.5,'rgba(55,60,100,0.32)');
-  band.addColorStop(0.7,'rgba(30,35,60,0.18)');
-  band.addColorStop(1,'rgba(0,0,0,0)');
-  tx.save();tx.translate(size/2,size/4);tx.rotate(-0.45);
-  tx.fillStyle=band;tx.fillRect(-size,- 160,size*2,320);tx.restore();
-  // Scatter glow patches
-  for(let i=0;i<320;i++){
-    const x=Math.random()*size,y=Math.random()*(size/2);
-    const dx=Math.abs(x-size/2),dy=Math.abs(y-size/4);
-    const inBand=Math.sqrt(dx*0.3*dx*0.3+dy*dy)<200;
-    const r=inBand?(Math.random()*12+2):(Math.random()*4+1);
-    const a=inBand?(Math.random()*0.09+0.04):(Math.random()*0.02);
-    const g2=tx.createRadialGradient(x,y,0,x,y,r);
-    g2.addColorStop(0,`rgba(140,160,220,${a})`);
-    g2.addColorStop(1,'rgba(0,0,0,0)');
-    tx.fillStyle=g2;tx.beginPath();tx.arc(x,y,r,0,Math.PI*2);tx.fill();
-  }
-  const tex=new THREE.CanvasTexture(tc);
-  const geo=new THREE.SphereGeometry(495,64,32);
-  const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:1.0,depthWrite:false});
-  const mw=new THREE.Mesh(geo,mat);
-  mw.rotation.x=Math.PI*0.08; // tilt milky way plane
-  scene.add(mw);
-  // Store for zoom-based sharpening
-  window._mwMesh=mw; window._mwMat=mat;
+  // Use ESO Milky Way panorama (public domain, CORS-friendly via jsdelivr proxy)
+  const loader=new THREE.TextureLoader();
+  // Tycho star map / ESO milky way from a CORS-friendly CDN
+  loader.load(
+    'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/equirectangular/starmap_2020_4k.jpg',
+    function(tex){
+      tex.mapping=THREE.EquirectangularReflectionMapping;
+      const geo=new THREE.SphereGeometry(495,64,32);
+      const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.85,depthWrite:false});
+      const mw=new THREE.Mesh(geo,mat);
+      scene.add(mw);
+      window._mwMesh=mw; window._mwMat=mat;
+    },
+    undefined,
+    function(){ // fallback: procedural if texture fails
+      const size=2048,tc=document.createElement('canvas');
+      tc.width=size;tc.height=size/2;
+      const tx=tc.getContext('2d');
+      tx.fillStyle='#000510';tx.fillRect(0,0,size,size/2);
+      for(let i=0;i<600;i++){
+        const x=Math.random()*size,y=Math.random()*(size/2);
+        const bandY=size/4+Math.sin(x/size*Math.PI*2)*60;
+        const dist=Math.abs(y-bandY);
+        const inBand=dist<180;
+        const r=inBand?(Math.random()*18+3):(Math.random()*5+1);
+        const a=inBand?(Math.random()*0.12+0.05):(Math.random()*0.025);
+        const g2=tx.createRadialGradient(x,y,0,x,y,r);
+        const hue=inBand?(Math.random()<0.5?'140,160,255':'180,140,220'):'160,180,255';
+        g2.addColorStop(0,`rgba(${hue},${a})`);
+        g2.addColorStop(1,'rgba(0,0,0,0)');
+        tx.fillStyle=g2;tx.beginPath();tx.arc(x,y,r,0,Math.PI*2);tx.fill();
+      }
+      const tex2=new THREE.CanvasTexture(tc);
+      const geo=new THREE.SphereGeometry(495,64,32);
+      const mat=new THREE.MeshBasicMaterial({map:tex2,side:THREE.BackSide,transparent:true,opacity:0.9,depthWrite:false});
+      const mw=new THREE.Mesh(geo,mat);
+      scene.add(mw);
+      window._mwMesh=mw; window._mwMat=mat;
+    }
+  );
 })();
 
 // Star field
@@ -323,10 +329,10 @@ function camLook(){
   camera.fov=fov3; camera.updateProjectionMatrix();
   rotX=Math.max(-Math.PI/2+0.01,Math.min(Math.PI/2-0.01,rotX));
   camera.lookAt(new THREE.Vector3(Math.cos(rotX)*Math.sin(rotY),Math.sin(rotX),Math.cos(rotX)*Math.cos(rotY)));
-  // Milky way sharpens at low FOV
+  // Milky way: brighter + more detailed when zoomed in
   if(window._mwMat){
-    const t=Math.max(0,Math.min(1,(70-fov3)/60));
-    window._mwMat.opacity=0.6+t*0.4;
+    const t=Math.max(0,Math.min(1,(75-fov3)/65));
+    window._mwMat.opacity=0.55+t*0.45;
   }
   // Highlight hovered constellation fill
   fillObjs.forEach(f=>{
