@@ -79,19 +79,26 @@ html,body{width:100%;height:100%;background:#06080f;overflow:hidden}
 <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js" charset="utf-8"></script>
 <script>
 
+// [name, ra, dec, mag, spectral]
+// spectral: O=hot blue, B=blue-white, A=white, F=yellow-white, G=yellow, K=orange, M=red
 const STARS=[
-  ["Sirius",101.2875,-16.7161,-1.46],["Canopus",95.9879,-52.6957,-0.72],["Arcturus",213.9153,19.1822,-0.05],["Vega",279.2347,38.7837,0.03],
-  ["Capella",79.1722,45.998,0.08],["Rigel",78.6345,-8.2016,0.12],["Procyon",114.8255,5.225,0.34],["Achernar",24.4288,-57.2367,0.46],
-  ["Betelgeuse",88.7929,7.4071,0.50],["Hadar",210.9559,-60.373,0.60],["Altair",297.6958,8.8683,0.77],["Acrux",186.6496,-63.099,0.77],
-  ["Aldebaran",68.9802,16.5093,0.85],["Antares",247.3519,-26.432,1.06],["Spica",201.2983,-11.1614,1.04],["Pollux",116.3289,28.0262,1.14],
-  ["Fomalhaut",344.4127,-29.6222,1.16],["Deneb",310.358,45.2803,1.25],["Mimosa",191.9303,-59.6886,1.25],["Regulus",152.0929,11.9672,1.36],
-  ["Adhara",104.6564,-28.972,1.50],["Castor",113.6495,31.8883,1.57],["Bellatrix",81.2828,6.3497,1.64],["Elnath",81.5731,28.6075,1.65],
-  ["Alnilam",84.0534,-1.2019,1.70],["Alnitak",85.1897,-1.9426,1.74],["Alioth",193.5073,55.9598,1.76],["Dubhe",165.9319,61.751,1.79],
-  ["Alkaid",206.8852,49.3133,1.85],["Polaris",37.9542,89.2641,1.97],["Denebola",177.2649,14.572,2.14],["Algol",47.0421,40.9557,2.12],
-  ["Rigil Kent",219.9021,-60.834,-0.27],["Shaula",263.4022,-37.1038,1.62],["Nunki",283.8164,-26.2967,2.05],["Mizar",200.9814,54.9254,2.23],
-  ["Alphard",141.8968,-8.6586,1.99],["Mirfak",51.0807,49.8612,1.79],["Peacock",306.4119,-56.735,1.94],["Enif",326.0465,9.875,2.38],
-  ["Alpheratz",2.0969,29.0904,2.07],["Rasalhague",263.7335,12.56,2.08],["Kaus Australis",276.043,-34.3846,1.85],["Kochab",222.6761,74.1555,2.07],
+  ["Sirius",101.2875,-16.7161,-1.46,"A"],["Canopus",95.9879,-52.6957,-0.72,"F"],["Arcturus",213.9153,19.1822,-0.05,"K"],["Vega",279.2347,38.7837,0.03,"A"],
+  ["Capella",79.1722,45.998,0.08,"G"],["Rigel",78.6345,-8.2016,0.12,"B"],["Procyon",114.8255,5.225,0.34,"F"],["Achernar",24.4288,-57.2367,0.46,"B"],
+  ["Betelgeuse",88.7929,7.4071,0.50,"M"],["Hadar",210.9559,-60.373,0.60,"B"],["Altair",297.6958,8.8683,0.77,"A"],["Acrux",186.6496,-63.099,0.77,"B"],
+  ["Aldebaran",68.9802,16.5093,0.85,"K"],["Antares",247.3519,-26.432,1.06,"M"],["Spica",201.2983,-11.1614,1.04,"B"],["Pollux",116.3289,28.0262,1.14,"K"],
+  ["Fomalhaut",344.4127,-29.6222,1.16,"A"],["Deneb",310.358,45.2803,1.25,"A"],["Mimosa",191.9303,-59.6886,1.25,"B"],["Regulus",152.0929,11.9672,1.36,"B"],
+  ["Adhara",104.6564,-28.972,1.50,"B"],["Castor",113.6495,31.8883,1.57,"A"],["Bellatrix",81.2828,6.3497,1.64,"B"],["Elnath",81.5731,28.6075,1.65,"B"],
+  ["Alnilam",84.0534,-1.2019,1.70,"B"],["Alnitak",85.1897,-1.9426,1.74,"O"],["Alioth",193.5073,55.9598,1.76,"A"],["Dubhe",165.9319,61.751,1.79,"K"],
+  ["Alkaid",206.8852,49.3133,1.85,"B"],["Polaris",37.9542,89.2641,1.97,"F"],["Denebola",177.2649,14.572,2.14,"A"],["Algol",47.0421,40.9557,2.12,"B"],
+  ["Rigil Kent",219.9021,-60.834,-0.27,"G"],["Shaula",263.4022,-37.1038,1.62,"B"],["Nunki",283.8164,-26.2967,2.05,"B"],["Mizar",200.9814,54.9254,2.23,"A"],
+  ["Alphard",141.8968,-8.6586,1.99,"K"],["Mirfak",51.0807,49.8612,1.79,"F"],["Peacock",306.4119,-56.735,1.94,"B"],["Enif",326.0465,9.875,2.38,"K"],
+  ["Alpheratz",2.0969,29.0904,2.07,"B"],["Rasalhague",263.7335,12.56,2.08,"A"],["Kaus Australis",276.043,-34.3846,1.85,"B"],["Kochab",222.6761,74.1555,2.07,"K"],
 ];
+// Spectral type → RGB color
+function spectralColor(sp){
+  const c={O:[155,176,255],B:[170,191,255],A:[255,255,255],F:[255,244,220],G:[255,229,150],K:[255,180,80],M:[255,100,60]};
+  return c[sp]||c['A'];
+}
 const CONSTELLATIONS=[
   {name:"Orion",icon:"⭐",ra:83.8,dec:5.0,bright:"Rigel",n:7,best:"January",desc:"The Hunter — contains the Orion Nebula and the iconic three-star belt.",lines:[[88.79,7.41,81.28,6.35],[81.28,6.35,78.63,-8.20],[78.63,-8.20,84.05,-1.20],[84.05,-1.20,85.19,-1.94],[85.19,-1.94,88.79,7.41],[84.05,-1.20,83.00,-9.67],[85.19,-1.94,86.94,-9.67]]},
   {name:"Leo",icon:"♌",ra:155.0,dec:15.0,bright:"Regulus",n:9,best:"April",desc:"The Lion — its sickle asterism traces the lion's mane. A zodiac constellation.",lines:[[152.09,11.97,154.99,19.84],[154.99,19.84,168.53,15.43],[168.53,15.43,177.26,14.57],[177.26,14.57,170.51,6.03],[170.51,6.03,152.09,11.97],[154.99,19.84,148.19,26.00],[148.19,26.00,146.46,23.77],[146.46,23.77,152.09,11.97]]},
@@ -158,11 +165,11 @@ scene.background=new THREE.Color(0x06080f);
 
   // Draw band layers from widest to narrowest
   const layers=[
-    {hw:H*0.28, col:'30,50,120',  a:0.4},
-    {hw:H*0.18, col:'50,75,160',  a:0.5},
-    {hw:H*0.10, col:'80,110,200', a:0.55},
-    {hw:H*0.055,col:'120,150,230',a:0.6},
-    {hw:H*0.025,col:'180,200,255',a:0.65},
+    {hw:H*0.28, col:'20,35,100',  a:0.5},
+    {hw:H*0.18, col:'40,65,155',  a:0.6},
+    {hw:H*0.10, col:'70,105,210', a:0.65},
+    {hw:H*0.055,col:'115,150,240',a:0.72},
+    {hw:H*0.025,col:'200,215,255',a:0.80},
   ];
   for(const L of layers){
     for(let x=0;x<W;x+=4){
@@ -262,23 +269,67 @@ let bgStarsMesh, brightStarsMesh, bloomStarsMesh;
   bgStarsMesh=new THREE.Points(g,mat);scene.add(bgStarsMesh);
 })();
 
-// 5. Bright named stars — size by magnitude (mag<0→5px, <1→4px, <2→3px, <3→2.5px), bloom halo opacity 0.15
+// 5. Bright named stars — spectral colors + magnitude-based size + multi-layer bloom
 (function(){
   const R=490;
   const allPos=[],allCol=[];
+  const bloomPos=[],bloomCol=[],bloomSizes=[];
+  const bloom2Pos=[],bloom2Col=[];
+
   STARS.forEach(s=>{
     const v=rd2v(s[1],s[2]).multiplyScalar(R);
     allPos.push(v.x,v.y,v.z);
-    const b=Math.min(1,Math.max(0.6,(3-s[3])/5));
-    allCol.push(b,Math.min(1,b*1.05),1);
+    const [cr,cg,cb]=spectralColor(s[4]);
+    allCol.push(cr/255,cg/255,cb/255);
+    bloomPos.push(v.x,v.y,v.z);
+    bloomCol.push(cr/255,cg/255,cb/255);
+    bloom2Pos.push(v.x,v.y,v.z);
+    bloom2Col.push(cr/255,cg/255,cb/255);
   });
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(allPos),3));
-  g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(allCol),3));
-  const mat=new THREE.PointsMaterial({size:3.5,map:starSprite,transparent:true,opacity:0.95,vertexColors:true,sizeAttenuation:false,alphaTest:0.05,blending:THREE.AdditiveBlending,depthWrite:false});
-  brightStarsMesh=new THREE.Points(g,mat);scene.add(brightStarsMesh);
-  const bloomMat=new THREE.PointsMaterial({size:8,map:starSprite,transparent:true,opacity:0.15,vertexColors:true,sizeAttenuation:false,alphaTest:0.05,blending:THREE.AdditiveBlending,depthWrite:false});
-  bloomStarsMesh=new THREE.Points(g,bloomMat);scene.add(bloomStarsMesh);
+
+  // Core stars — size by magnitude
+  const coreGeo=new THREE.BufferGeometry();
+  coreGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(allPos),3));
+  coreGeo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(allCol),3));
+  // Per-star sizes via custom shader isn't available in basic PointsMaterial easily,
+  // so we split into magnitude groups
+  const groups=[
+    {stars:[],size:6.5}, // mag < 0
+    {stars:[],size:5.0}, // mag 0–1
+    {stars:[],size:3.8}, // mag 1–2
+    {stars:[],size:2.8}, // mag 2+
+  ];
+  STARS.forEach((s,i)=>{
+    const g=s[3]<0?0:s[3]<1?1:s[3]<2?2:3;
+    groups[g].stars.push(i);
+  });
+  groups.forEach(grp=>{
+    if(!grp.stars.length)return;
+    const pos=[],col=[];
+    grp.stars.forEach(i=>{
+      pos.push(allPos[i*3],allPos[i*3+1],allPos[i*3+2]);
+      col.push(allCol[i*3],allCol[i*3+1],allCol[i*3+2]);
+    });
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));
+    g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(col),3));
+    const mat=new THREE.PointsMaterial({size:grp.size,map:starSprite,transparent:true,opacity:1.0,vertexColors:true,sizeAttenuation:false,alphaTest:0.04,blending:THREE.AdditiveBlending,depthWrite:false});
+    brightStarsMesh=new THREE.Points(g,mat);scene.add(brightStarsMesh);
+  });
+
+  // Bloom layer 1 — mid halo
+  const b1g=new THREE.BufferGeometry();
+  b1g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(bloomPos),3));
+  b1g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(bloomCol),3));
+  const b1mat=new THREE.PointsMaterial({size:18,map:starSprite,transparent:true,opacity:0.22,vertexColors:true,sizeAttenuation:false,alphaTest:0.01,blending:THREE.AdditiveBlending,depthWrite:false});
+  bloomStarsMesh=new THREE.Points(b1g,b1mat);scene.add(bloomStarsMesh);
+
+  // Bloom layer 2 — wide soft glow
+  const b2g=new THREE.BufferGeometry();
+  b2g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(bloom2Pos),3));
+  b2g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(bloom2Col),3));
+  const b2mat=new THREE.PointsMaterial({size:40,map:starSprite,transparent:true,opacity:0.09,vertexColors:true,sizeAttenuation:false,alphaTest:0.01,blending:THREE.AdditiveBlending,depthWrite:false});
+  scene.add(new THREE.Points(b2g,b2mat));
 })();
 
 // 6. Constellation lines — rgba(68,180,200,0.55), width 0.8
