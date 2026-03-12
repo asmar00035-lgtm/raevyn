@@ -180,48 +180,131 @@ renderer.setSize(innerWidth,innerHeight);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
 
-// Milky Way — real NASA ESO panorama texture
+// Milky Way — high quality procedural galaxy band
 (function(){
-  // Use ESO Milky Way panorama (public domain, CORS-friendly via jsdelivr proxy)
-  const loader=new THREE.TextureLoader();
-  // Tycho star map / ESO milky way from a CORS-friendly CDN
-  loader.load(
-    'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/equirectangular/starmap_2020_4k.jpg',
-    function(tex){
-      tex.mapping=THREE.EquirectangularReflectionMapping;
-      const geo=new THREE.SphereGeometry(495,64,32);
-      const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.85,depthWrite:false});
-      const mw=new THREE.Mesh(geo,mat);
-      scene.add(mw);
-      window._mwMesh=mw; window._mwMat=mat;
-    },
-    undefined,
-    function(){ // fallback: procedural if texture fails
-      const size=2048,tc=document.createElement('canvas');
-      tc.width=size;tc.height=size/2;
-      const tx=tc.getContext('2d');
-      tx.fillStyle='#000510';tx.fillRect(0,0,size,size/2);
-      for(let i=0;i<600;i++){
-        const x=Math.random()*size,y=Math.random()*(size/2);
-        const bandY=size/4+Math.sin(x/size*Math.PI*2)*60;
-        const dist=Math.abs(y-bandY);
-        const inBand=dist<180;
-        const r=inBand?(Math.random()*18+3):(Math.random()*5+1);
-        const a=inBand?(Math.random()*0.12+0.05):(Math.random()*0.025);
-        const g2=tx.createRadialGradient(x,y,0,x,y,r);
-        const hue=inBand?(Math.random()<0.5?'140,160,255':'180,140,220'):'160,180,255';
-        g2.addColorStop(0,`rgba(${hue},${a})`);
-        g2.addColorStop(1,'rgba(0,0,0,0)');
-        tx.fillStyle=g2;tx.beginPath();tx.arc(x,y,r,0,Math.PI*2);tx.fill();
-      }
-      const tex2=new THREE.CanvasTexture(tc);
-      const geo=new THREE.SphereGeometry(495,64,32);
-      const mat=new THREE.MeshBasicMaterial({map:tex2,side:THREE.BackSide,transparent:true,opacity:0.9,depthWrite:false});
-      const mw=new THREE.Mesh(geo,mat);
-      scene.add(mw);
-      window._mwMesh=mw; window._mwMat=mat;
+  const W=4096, H=2048;
+  const tc=document.createElement('canvas');
+  tc.width=W; tc.height=H;
+  const tx=tc.getContext('2d');
+
+  // Black base
+  tx.fillStyle='#000005';
+  tx.fillRect(0,0,W,H);
+
+  // Helper: galactic coords to equirectangular pixel
+  // Milky Way band runs diagonally across the sky
+  // Center of galaxy: RA=266.4, Dec=-29.0 → pixel ~(x=3022, y=1200)
+  // We paint in equirectangular space directly
+
+  // --- MAIN GALAXY BAND ---
+  // The band follows a sine-like curve across the equirectangular map
+  function bandY(x) {
+    // Approximate the galactic plane projection in equirectangular
+    const ra = (x / W) * 360; // RA in degrees
+    // Rough sinusoidal fit to galactic plane
+    return H/2 + Math.sin((ra - 33) * Math.PI/180) * 0.62 * H/2
+                + Math.sin((ra*2 - 10) * Math.PI/180) * 0.08 * H/2;
+  }
+
+  // Draw band as stacked gaussian layers
+  const layers = [
+    {width:320, alpha:0.22, r:30,  g:35,  b:70},   // outer halo blue
+    {width:200, alpha:0.30, r:40,  g:50,  b:90},   // mid halo
+    {width:100, alpha:0.40, r:60,  g:70,  b:120},  // inner glow
+    {width:50,  alpha:0.55, r:90,  g:100, b:160},  // core glow
+    {width:20,  alpha:0.65, r:150, g:160, b:220},  // bright core
+  ];
+
+  layers.forEach(({width, alpha, r, g, b}) => {
+    // Draw strip along the band
+    for(let x=0; x<W; x+=2) {
+      const cy = bandY(x);
+      const grad = tx.createLinearGradient(x, cy-width, x, cy+width);
+      grad.addColorStop(0,   `rgba(${r},${g},${b},0)`);
+      grad.addColorStop(0.4, `rgba(${r},${g},${b},${alpha*0.5})`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},${alpha})`);
+      grad.addColorStop(0.6, `rgba(${r},${g},${b},${alpha*0.5})`);
+      grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+      tx.fillStyle=grad;
+      tx.fillRect(x, cy-width, 2, width*2);
     }
-  );
+  });
+
+  // --- GALACTIC CENTER bright bulge (RA~266, Dec~-29) ---
+  const gcX = (266.4/360)*W;
+  const gcY = H/2 + (29/90)*(H/2)*0.5;
+  const gc = tx.createRadialGradient(gcX,gcY,0, gcX,gcY,380);
+  gc.addColorStop(0,   'rgba(255,230,160,0.55)');
+  gc.addColorStop(0.15,'rgba(200,180,130,0.40)');
+  gc.addColorStop(0.4, 'rgba(120,110,90,0.20)');
+  gc.addColorStop(1,   'rgba(0,0,0,0)');
+  tx.fillStyle=gc; tx.beginPath(); tx.arc(gcX,gcY,380,0,Math.PI*2); tx.fill();
+
+  // Inner bright core
+  const gc2 = tx.createRadialGradient(gcX,gcY,0, gcX,gcY,120);
+  gc2.addColorStop(0,   'rgba(255,240,200,0.75)');
+  gc2.addColorStop(0.3, 'rgba(220,200,150,0.45)');
+  gc2.addColorStop(1,   'rgba(0,0,0,0)');
+  tx.fillStyle=gc2; tx.beginPath(); tx.arc(gcX,gcY,120,0,Math.PI*2); tx.fill();
+
+  // --- DARK DUST LANES ---
+  // Great Rift (dark lane splitting the band near galactic center)
+  for(let x=W*0.35; x<W*0.65; x+=3) {
+    const cy = bandY(x) - 15;
+    const rift = tx.createLinearGradient(x, cy-35, x, cy+35);
+    rift.addColorStop(0,   'rgba(0,0,0,0)');
+    rift.addColorStop(0.5, 'rgba(0,0,5,0.45)');
+    rift.addColorStop(1,   'rgba(0,0,0,0)');
+    tx.fillStyle=rift;
+    tx.fillRect(x, cy-35, 3, 70);
+  }
+
+  // --- NEBULA PATCHES along band ---
+  const nebulae = [
+    {x:W*0.42, y:null, r:90,  cr:'180,120,80',  a:0.18},  // Lagoon
+    {x:W*0.44, y:null, r:70,  cr:'140,160,220', a:0.15},  // Trifid
+    {x:W*0.50, y:null, r:110, cr:'160,120,200', a:0.12},  // Omega
+    {x:W*0.22, y:null, r:80,  cr:'120,180,220', a:0.16},  // Orion region
+    {x:W*0.30, y:null, r:60,  cr:'200,150,100', a:0.13},  // patch
+    {x:W*0.55, y:null, r:65,  cr:'140,200,160', a:0.12},  // patch
+    {x:W*0.70, y:null, r:75,  cr:'180,140,220', a:0.10},  // patch
+    {x:W*0.10, y:null, r:55,  cr:'160,200,240', a:0.12},  // patch
+  ];
+  nebulae.forEach(n => {
+    n.y = bandY(n.x) + (Math.random()-0.5)*60;
+    const ng = tx.createRadialGradient(n.x,n.y,0, n.x,n.y,n.r);
+    ng.addColorStop(0,   `rgba(${n.cr},${n.a})`);
+    ng.addColorStop(0.5, `rgba(${n.cr},${n.a*0.5})`);
+    ng.addColorStop(1,   'rgba(0,0,0,0)');
+    tx.fillStyle=ng; tx.beginPath(); tx.arc(n.x,n.y,n.r,0,Math.PI*2); tx.fill();
+  });
+
+  // --- STAR CLUSTERS along band ---
+  for(let i=0; i<800; i++) {
+    const x = Math.random()*W;
+    const cy = bandY(x);
+    const spread = 200;
+    const y = cy + (Math.random()-0.5)*spread*2;
+    const dist = Math.abs(y-cy);
+    const inBand = dist < spread;
+    if(!inBand && Math.random()>0.3) continue;
+    const size = inBand ? Math.random()*2.5+0.5 : Math.random()*1.2+0.3;
+    const bright = inBand ? Math.random()*0.7+0.3 : Math.random()*0.3+0.1;
+    const t = Math.random();
+    let col;
+    if(t<0.5) col=`rgba(200,210,255,${bright})`;
+    else if(t<0.75) col=`rgba(255,240,200,${bright})`;
+    else col=`rgba(255,180,120,${bright*0.7})`;
+    tx.fillStyle=col;
+    tx.beginPath(); tx.arc(x,y,size,0,Math.PI*2); tx.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(tc);
+  const geo = new THREE.SphereGeometry(494,64,32);
+  const mat = new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.9,depthWrite:false});
+  const mw = new THREE.Mesh(geo,mat);
+  scene.add(mw);
+  window._mwMesh=mw; window._mwMat=mat;
 })();
 
 // Star field
