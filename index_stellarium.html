@@ -3,21 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no" />
-  <title>Raevyn — Name a Star</title>
+  <title>Raevyn</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
     #aladin-lite-div {
-      position: fixed;
-      top: 0; left: 0;
       width: 100vw;
       height: 100vh;
     }
-    /* Hide Aladin UI elements */
+    /* Hide all Aladin UI */
     .aladin-location,
     .aladin-fov,
     .aladin-reticleControl,
-    .aladin-logo { display: none !important; }
+    .aladin-logo,
+    .aladin-toolbar,
+    .aladin-projControls { display: none !important; }
   </style>
 </head>
 <body>
@@ -34,22 +39,22 @@
     A.init.then(() => {
       aladin = A.aladin('#aladin-lite-div', {
         survey:         'P/DSS2/color',
-        fov:            60,
+        fov:            120,
         target:         '0 0',
         cooFrame:       'equatorial',
-        showReticle:    false,
-        showZoomControl:         false,
-        showFullscreenControl:   false,
-        showLayersControl:       false,
-        showGotoControl:         false,
-        showSimbadPointerControl:false,
-        showShareControl:        false,
-        showCooGrid:             false,
-        showFrame:               false,
-        showCooLocation:         false,
-        showProjectionControl:   false,
-        showContextMenu:         false,
-        showStatusBar:           false,
+        showReticle:              false,
+        showZoomControl:          false,
+        showFullscreenControl:    false,
+        showLayersControl:        false,
+        showGotoControl:          false,
+        showSimbadPointerControl: false,
+        showShareControl:         false,
+        showCooGrid:              false,
+        showFrame:                false,
+        showCooLocation:          false,
+        showProjectionControl:    false,
+        showContextMenu:          false,
+        showStatusBar:            false,
       });
     });
   </script>
