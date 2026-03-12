@@ -21,7 +21,8 @@
       }
       .aladin-logo { display: none !important; }
     </style>
-    <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js" charset="utf-8"></script>
+    <!-- نسخة 3.3.3 المستقرة بدل latest -->
+    <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/3.3.3/aladin.js" charset="utf-8"></script>
   </head>
   <body>
     <div id="aladin-lite-div"></div>
@@ -44,7 +45,7 @@
       A.init.then(() => {
         aladin = A.aladin('#aladin-lite-div', {
           survey:   'P/DSS2/color',
-          fov:      180,        // يبدأ بعيد جداً — السماء كاملة
+          fov:      180,
           target:   '0 0',
           cooFrame: 'ICRSd',
           showReticle: false,
@@ -59,10 +60,8 @@
           showStatusBar: false,
         });
 
-        // Hide overlay after initial tiles load
         setTimeout(hideOverlay, 2500);
 
-        // Overlay on move
         const div = document.getElementById('aladin-lite-div');
         div.addEventListener('mousedown',  () => showOverlay());
         div.addEventListener('mouseup',    () => hideOverlay());
