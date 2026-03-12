@@ -25,6 +25,10 @@ body {
   height: 100vh !important;
 }
 
-.aladin-logo {
+/* Hide Aladin branding */
+.aladin-logo,
+.aladin-cooFrame,
+.aladin-location,
+.aladin-fov {
   display: none !important;
 }
