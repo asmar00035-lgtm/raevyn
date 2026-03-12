@@ -483,9 +483,7 @@ A.init.then(()=>{
 // ── MODE SWITCH ───────────────────────────────────────────────────────────────
 function syncToAladin(){
   if(!aladinReady||!aladin)return;
-  const d=getViewDir();
-  const dec=Math.asin(Math.max(-1,Math.min(1,d.y)))*(180/Math.PI);
-  const ra=(Math.atan2(d.z,-d.x)*(180/Math.PI)+360)%360;
+  const[ra,dec]=getViewRaDec();
   aladin.gotoRaDec(ra,dec);
   aladin.setFov(fov3); aladinFovTarget=fov3;
 }
