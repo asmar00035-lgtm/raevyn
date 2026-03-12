@@ -305,10 +305,22 @@ let fillObjs=[];
 let fov3=70,tFov3=70,drag=false,lx=0,ly=0,clickMoved=false;
 let velX=0,velY=0;
 const camQuat=new THREE.Quaternion(),tQuat=new THREE.Quaternion();
-(function initCam(){const fwd=rd2v(83.8,5.0).normalize();const m=new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0),fwd,new THREE.Vector3(0,1,0));camQuat.setFromRotationMatrix(m);tQuat.copy(camQuat);})();
+(function initCam(){
+  // Point camera toward Orion (RA=83.8, Dec=5.0) at startup
+  const fwd=rd2v(83.8,5.0).normalize();
+  // THREE camera looks down -Z by default, so we need to rotate -Z to fwd
+  const defaultDir=new THREE.Vector3(0,0,-1);
+  camQuat.setFromUnitVectors(defaultDir,fwd);
+  tQuat.copy(camQuat);
+})();
 
 function rotateCam(dx,dy){const s=0.003*(fov3/70);const qH=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-dx*s);const right=new THREE.Vector3(1,0,0).applyQuaternion(tQuat);const qV=new THREE.Quaternion().setFromAxisAngle(right,dy*s);tQuat.premultiply(qH);tQuat.premultiply(qV);}
-function lookAtRaDec(ra,dec,newFov){const fwd=rd2v(ra,dec).normalize();const m=new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0),fwd,new THREE.Vector3(0,1,0));tQuat.setFromRotationMatrix(m);if(newFov!=null)tFov3=newFov;}
+function lookAtRaDec(ra,dec,newFov){
+  const fwd=rd2v(ra,dec).normalize();
+  const defaultDir=new THREE.Vector3(0,0,-1);
+  tQuat.setFromUnitVectors(defaultDir,fwd);
+  if(newFov!=null)tFov3=newFov;
+}
 function getViewRaDec(){const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(camQuat);const dec=Math.asin(Math.max(-1,Math.min(1,fwd.y)))*(180/Math.PI);const ra=(Math.atan2(fwd.z,-fwd.x)*(180/Math.PI)+360)%360;return[ra,dec];}
 
 function zoomAtPoint(delta,px,py){
