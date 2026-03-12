@@ -180,69 +180,126 @@ renderer.setSize(innerWidth,innerHeight);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
 
-// Milky Way — ESO/NASA equirectangular texture (multiple fallbacks)
+// Milky Way — ESO 360 panorama via CORS proxy
 (function(){
-  const urls=[
-    'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Milky_Way_equirectangular_-_edited.jpg/2560px-Milky_Way_equirectangular_-_edited.jpg',
+  const loader = new THREE.TextureLoader();
+  loader.crossOrigin = 'anonymous';
+
+  // Multiple real equirectangular sky sources
+  const urls = [
+    // ESO Milky Way panorama via Wikimedia (public domain, CORS ok)
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Milky_Way_equirectangular_-_edited.jpg/4096px-Milky_Way_equirectangular_-_edited.jpg',
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Southern_Milky_Way_-_Sutherland_-_equirectangular.jpg/4096px-Southern_Milky_Way_-_Sutherland_-_equirectangular.jpg',
     'https://upload.wikimedia.org/wikipedia/commons/0/00/Milky_Way_equirectangular_-_edited.jpg',
   ];
-  const loader=new THREE.TextureLoader();
-  function tryLoad(i){
-    if(i>=urls.length){ buildProcedural(); return; }
-    loader.crossOrigin='anonymous';
+
+  const geo = new THREE.SphereGeometry(493, 64, 32);
+
+  function tryLoad(i) {
+    if (i >= urls.length) { buildCanvas(); return; }
     loader.load(urls[i],
-      tex=>{
-        const geo=new THREE.SphereGeometry(493,64,32);
-        const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.88,depthWrite:false});
-        const mw=new THREE.Mesh(geo,mat);
+      tex => {
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.generateMipmaps = true;
+        const mat = new THREE.MeshBasicMaterial({
+          map: tex, side: THREE.BackSide,
+          transparent: true, opacity: 0.92, depthWrite: false
+        });
+        const mw = new THREE.Mesh(geo, mat);
         scene.add(mw);
-        window._mwMesh=mw;window._mwMat=mat;
+        window._mwMesh = mw; window._mwMat = mat;
+        console.log('Milky Way loaded:', urls[i]);
       },
       undefined,
-      ()=>tryLoad(i+1)
+      err => { console.warn('MW failed:', urls[i]); tryLoad(i+1); }
     );
   }
-  function buildProcedural(){
-    // High-res procedural fallback
-    const W=8192,H=4096;
-    const tc=document.createElement('canvas');tc.width=W;tc.height=H;
-    const tx=tc.getContext('2d');
-    tx.fillStyle='#000008';tx.fillRect(0,0,W,H);
-    function bY(x){
+
+  // High quality canvas fallback
+  function buildCanvas() {
+    console.log('Using canvas milky way');
+    const W=8192, H=4096;
+    const tc = document.createElement('canvas');
+    tc.width=W; tc.height=H;
+    const tx = tc.getContext('2d');
+    tx.fillStyle='#00000a'; tx.fillRect(0,0,W,H);
+
+    function bY(x) {
       const ra=(x/W)*360;
-      return H/2+Math.sin((ra-33)*Math.PI/180)*0.595*(H/2)+Math.sin((ra*2-8)*Math.PI/180)*0.085*(H/2);
+      return H/2
+        + Math.sin((ra-33)*Math.PI/180)*0.595*(H/2)
+        + Math.sin((ra*2-8)*Math.PI/180)*0.085*(H/2);
     }
-    [[600,0.06,'200,215,255'],[300,0.13,'160,180,240'],[140,0.25,'120,145,220'],[60,0.40,'100,125,210'],[25,0.58,'150,165,235']].forEach(([hw,a,col])=>{
-      for(let x=0;x<W;x+=2){
-        const cy=bY(x),g=tx.createLinearGradient(x,cy-hw,x,cy+hw);
-        g.addColorStop(0,`rgba(${col},0)`);g.addColorStop(0.5,`rgba(${col},${a})`);g.addColorStop(1,`rgba(${col},0)`);
-        tx.fillStyle=g;tx.fillRect(x,cy-hw,2,hw*2);
+
+    // Multi-layer band
+    [[600,0.07,'180,195,255'],[320,0.14,'150,168,245'],[150,0.26,'110,135,225'],[65,0.42,'95,120,215'],[28,0.60,'140,158,235']].forEach(([hw,a,col])=>{
+      for(let x=0;x<W;x++){
+        const cy=bY(x);
+        const g=tx.createLinearGradient(x,cy-hw,x,cy+hw);
+        g.addColorStop(0,`rgba(${col},0)`);
+        g.addColorStop(0.5,`rgba(${col},${a})`);
+        g.addColorStop(1,`rgba(${col},0)`);
+        tx.fillStyle=g; tx.fillRect(x,cy-hw,1,hw*2);
       }
     });
-    const gcX=(266.4/360)*W,gcY=bY(gcX);
-    [[450,'255,235,170',0.55],[200,'255,220,140',0.70],[80,'255,245,200',0.85]].forEach(([r,c,a])=>{
+
+    // Galactic center
+    const gcX=(266.4/360)*W, gcY=bY(gcX);
+    [[460,'255,240,175',0.58],[210,'255,225,145',0.72],[85,'255,248,205',0.88],[30,'255,255,230',0.95]].forEach(([r,c,a])=>{
       const g=tx.createRadialGradient(gcX,gcY,0,gcX,gcY,r);
-      g.addColorStop(0,`rgba(${c},${a})`);g.addColorStop(1,'rgba(0,0,0,0)');
-      tx.fillStyle=g;tx.beginPath();tx.arc(gcX,gcY,r,0,Math.PI*2);tx.fill();
+      g.addColorStop(0,`rgba(${c},${a})`); g.addColorStop(1,'rgba(0,0,0,0)');
+      tx.fillStyle=g; tx.beginPath(); tx.arc(gcX,gcY,r,0,Math.PI*2); tx.fill();
     });
-    for(let i=0;i<5000;i++){
-      const x=Math.random()*W,cy=bY(x),dy=(Math.random()-0.5)*500;
-      const d=Math.exp(-dy*dy/(2*130*130));
-      if(Math.random()>d*0.9+0.1)continue;
-      const sz=Math.random()*2+0.4,b=0.3+d*0.7,t=Math.random();
-      tx.fillStyle=t<0.55?`rgba(210,220,255,${b})`:t<0.78?`rgba(255,240,200,${b})`:`rgba(255,185,120,${b*0.7})`;
-      tx.beginPath();tx.arc(x,cy+dy,sz,0,Math.PI*2);tx.fill();
+
+    // Cygnus bright region
+    const cyX=(310/360)*W, cyY=bY(cyX);
+    const cyg=tx.createRadialGradient(cyX,cyY,0,cyX,cyY,280);
+    cyg.addColorStop(0,'rgba(170,195,255,0.38)'); cyg.addColorStop(1,'rgba(0,0,0,0)');
+    tx.fillStyle=cyg; tx.beginPath(); tx.arc(cyX,cyY,280,0,Math.PI*2); tx.fill();
+
+    // Great Rift dust lanes
+    for(let x=W*0.28;x<W*0.68;x+=2){
+      const cy=bY(x), v=Math.sin(x/90)*14+Math.sin(x/32)*6;
+      [[42,0.55],[22,0.72],[9,0.84]].forEach(([hw,a])=>{
+        const g=tx.createLinearGradient(x,cy-hw+v,x,cy+hw+v);
+        g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(0.5,`rgba(0,0,5,${a})`); g.addColorStop(1,'rgba(0,0,0,0)');
+        tx.fillStyle=g; tx.fillRect(x,cy-hw+v,2,hw*2);
+      });
     }
+
+    // Nebula patches
+    [{x:0.415,dy:-5,r:120,c:'255,115,75',a:0.22},{x:0.432,dy:28,r:85,c:'195,95,155',a:0.18},
+     {x:0.46,dy:-9,r:140,c:'215,95,55',a:0.20},{x:0.215,dy:2,r:105,c:'255,135,75',a:0.20},
+     {x:0.54,dy:-16,r:75,c:'155,115,225',a:0.14},{x:0.68,dy:6,r:90,c:'115,155,240',a:0.14}
+    ].forEach(({x,dy,r,c,a})=>{
+      const px=x*W, cy=bY(px)+dy;
+      const g=tx.createRadialGradient(px,cy,0,px,cy,r);
+      g.addColorStop(0,`rgba(${c},${a})`); g.addColorStop(0.6,`rgba(${c},${a*0.3})`); g.addColorStop(1,'rgba(0,0,0,0)');
+      tx.fillStyle=g; tx.beginPath(); tx.arc(px,cy,r,0,Math.PI*2); tx.fill();
+    });
+
+    // Stars along band
+    for(let i=0;i<6000;i++){
+      const x=Math.random()*W, cy=bY(x), dy=(Math.random()-0.5)*520;
+      const d=Math.exp(-dy*dy/(2*135*135));
+      if(Math.random()>d*0.88+0.12) continue;
+      const sz=Math.random()*2.2+0.3, b=0.3+d*0.7, t=Math.random();
+      tx.fillStyle=t<0.55?`rgba(205,218,255,${b})`:t<0.78?`rgba(255,238,198,${b})`:`rgba(255,182,115,${b*0.65})`;
+      tx.beginPath(); tx.arc(x,cy+dy,sz,0,Math.PI*2); tx.fill();
+    }
+
     const tex=new THREE.CanvasTexture(tc);
-    const geo=new THREE.SphereGeometry(493,64,32);
-    const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.90,depthWrite:false});
+    tex.minFilter=THREE.LinearMipmapLinearFilter; tex.generateMipmaps=true;
+    const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.92,depthWrite:false});
     const mw=new THREE.Mesh(geo,mat);
-    scene.add(mw);window._mwMesh=mw;window._mwMat=mat;
+    scene.add(mw); window._mwMesh=mw; window._mwMat=mat;
   }
+
   tryLoad(0);
 })();
 
-// Star field// Star field// Star field
+// Star field// Star field// Star field// Star field
 (function(){
   const N=9000,R=500,pos=new Float32Array(N*3),col=new Float32Array(N*3);
   for(let i=0;i<N;i++){
@@ -256,7 +313,7 @@ const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
   const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.BufferAttribute(pos,3));
   g.setAttribute('color',new THREE.BufferAttribute(col,3));
-  scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:0.65,vertexColors:true,sizeAttenuation:false})));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:0.8,vertexColors:true,sizeAttenuation:false})));
 })();
 (function(){
   const R=490,pos=new Float32Array(STARS.length*3),col=new Float32Array(STARS.length*3);
@@ -269,7 +326,7 @@ const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
   const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.BufferAttribute(pos,3));
   g.setAttribute('color',new THREE.BufferAttribute(col,3));
-  scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:2.8,vertexColors:true,sizeAttenuation:false})));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:3.5,vertexColors:true,sizeAttenuation:false})));
 })();
 let lineObj;
 (function(){
