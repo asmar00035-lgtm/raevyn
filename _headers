@@ -1,0 +1,4 @@
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.unistra.fr https://*.cds.unistra.fr https://aladin.cds.unistra.fr https://alasky.cds.unistra.fr https://alasky.u-strasbg.fr https://*.u-strasbg.fr data: blob:; img-src * data: blob:; connect-src *; worker-src blob: 'self';
