@@ -17,7 +17,7 @@
         background: #000; z-index: 10;
         pointer-events: none;
         opacity: 1;
-        transition: opacity 0.5s ease;
+        transition: opacity 0.6s ease;
       }
       .aladin-logo { display: none !important; }
     </style>
@@ -32,7 +32,8 @@
       let hideTimer = null;
 
       function hideOverlay() {
-        hideTimer = setTimeout(() => { overlay.style.opacity = '0'; }, 600);
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => { overlay.style.opacity = '0'; }, 700);
       }
       function showOverlay() {
         clearTimeout(hideTimer);
@@ -43,7 +44,7 @@
       A.init.then(() => {
         aladin = A.aladin('#aladin-lite-div', {
           survey:   'P/DSS2/color',
-          fov:      60,
+          fov:      180,        // يبدأ بعيد جداً — السماء كاملة
           target:   '0 0',
           cooFrame: 'ICRSd',
           showReticle: false,
@@ -58,12 +59,17 @@
           showStatusBar: false,
         });
 
-        // Hide overlay after initial load
-        hideOverlay();
+        // Hide overlay after initial tiles load
+        setTimeout(hideOverlay, 2500);
 
-        // Show overlay when moving
-        aladin.on('positionChanged', () => { showOverlay(); hideOverlay(); });
-        aladin.on('zoomChanged',     () => { showOverlay(); hideOverlay(); });
+        // Overlay on move
+        const div = document.getElementById('aladin-lite-div');
+        div.addEventListener('mousedown',  () => showOverlay());
+        div.addEventListener('mouseup',    () => hideOverlay());
+        div.addEventListener('mouseleave', () => hideOverlay());
+        div.addEventListener('touchstart', () => showOverlay(), { passive: true });
+        div.addEventListener('touchend',   () => hideOverlay(), { passive: true });
+        div.addEventListener('wheel',      () => { showOverlay(); hideOverlay(); }, { passive: true });
       });
     </script>
   </body>
