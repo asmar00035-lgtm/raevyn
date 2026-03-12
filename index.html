@@ -130,21 +130,29 @@ const renderer=new THREE.WebGLRenderer({canvas:cvs,antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,600);
+camera.position.set(0,0,0);
 
-// 1. Sky background color
-scene.background = new THREE.Color(0x06080f);
+// Sky background
+scene.background=new THREE.Color(0x06080f);
 
 // 2. Milky Way — single URL, opacity 0.88
 (function(){
   const loader=new THREE.TextureLoader();loader.crossOrigin='anonymous';
   const url='https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Milky_Way_equirectangular_-_edited.jpg/4096px-Milky_Way_equirectangular_-_edited.jpg';
   const geo=new THREE.SphereGeometry(493,64,32);
-  loader.load(url,tex=>{
-    tex.minFilter=THREE.LinearMipmapLinearFilter;tex.magFilter=THREE.LinearFilter;tex.generateMipmaps=true;
-    const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.88,depthWrite:false});
-    scene.add(new THREE.Mesh(geo,mat));window._mwMat=mat;
-  },undefined,()=>{
+  const urls=[
+    'https://svs.gsfc.nasa.gov/vis/a000000/a003500/a003581/TychoSkymapII.t5_08192x04096.jpg',
+    url
+  ];
+  function tryLoad(i){if(i>=urls.length){buildCanvas();return;}
+    loader.load(urls[i],tex=>{
+      tex.minFilter=THREE.LinearMipmapLinearFilter;tex.magFilter=THREE.LinearFilter;tex.generateMipmaps=true;
+      const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.88,depthWrite:false});
+      scene.add(new THREE.Mesh(geo,mat));window._mwMat=mat;
+    },undefined,()=>tryLoad(i+1));
+  }
+  function buildCanvas(){
     const W=8192,H=4096,tc=document.createElement('canvas');tc.width=W;tc.height=H;
     const tx=tc.getContext('2d');tx.fillStyle='#06080f';tx.fillRect(0,0,W,H);
     function bY(x){const ra=(x/W)*360;return H/2+Math.sin((ra-33)*Math.PI/180)*0.595*(H/2)+Math.sin((ra*2-8)*Math.PI/180)*0.085*(H/2);}
@@ -162,7 +170,8 @@ scene.background = new THREE.Color(0x06080f);
     const tex=new THREE.CanvasTexture(tc);tex.minFilter=THREE.LinearMipmapLinearFilter;tex.generateMipmaps=true;
     const mat=new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,transparent:true,opacity:0.88,depthWrite:false});
     scene.add(new THREE.Mesh(geo,mat));window._mwMat=mat;
-  });
+  }
+  tryLoad(0);
 })();
 
 // 3. Round star sprite texture (radial gradient)
@@ -177,7 +186,7 @@ const starSprite=(function(){
 // 4. Background stars — 12000, round sprites, 60% #c8d4ff, 25% #fff5e0, 15% #ffb870
 let bgStarsMesh, brightStarsMesh, bloomStarsMesh;
 (function(){
-  const N=12000,R=500,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+  const N=12000,R=490,pos=new Float32Array(N*3),col=new Float32Array(N*3);
   const c1={r:0.784,g:0.831,b:1},c2={r:1,g:0.961,b:0.878},c3={r:1,g:0.722,b:0.439};
   for(let i=0;i<N;i++){
     const u=Math.random()*2*Math.PI,v=Math.acos(2*Math.random()-1);
