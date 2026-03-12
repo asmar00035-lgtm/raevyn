@@ -120,7 +120,7 @@
   <div class="tb-sep"></div>
   <!-- Star Names -->
   <button class="tb-btn on" id="tb-stars" title="Star Names">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
     </svg>
   </button>
@@ -305,14 +305,14 @@ A.init.then(()=>{
 
   document.getElementById('aladin-lite-div').addEventListener('wheel',e=>{
     e.stopImmediatePropagation();e.preventDefault();
-    targetFov=Math.min(180,Math.max(0.01,targetFov*(e.deltaY>0?1.08:0.92)));
+    targetFov=Math.min(180,Math.max(0.01,targetFov*(e.deltaY>0?1.06:0.94)));
     if(!animating){animating=true;smoothZoom();}
   },{capture:true,passive:false});
 
   function smoothZoom(){
     const cur=aladin.getFov()[0],diff=targetFov-cur;
     if(Math.abs(diff)<0.01){aladin.setFov(targetFov);animating=false;update();return;}
-    aladin.setFov(cur+diff*0.12);update();requestAnimationFrame(smoothZoom);
+    aladin.setFov(cur+diff*0.08);update();requestAnimationFrame(smoothZoom);
   }
 
   function update(){
@@ -326,7 +326,7 @@ A.init.then(()=>{
         const segs=CON_LINES[c.name];if(!segs)return;
         const sel=selectedCon===c.name;
         ctx.strokeStyle=sel?`rgba(160,230,240,${Math.min(1,lineOp*2.2)})`:`rgba(80,180,200,${lineOp})`;
-        ctx.lineWidth=sel?1.6:0.85;
+        ctx.lineWidth=sel?1.2:0.6;
         segs.forEach(seg=>{
           const p1=aladin.world2pix(seg[0],seg[1]),p2=aladin.world2pix(seg[2],seg[3]);
           if(!p1||!p2||Math.hypot(p2[0]-p1[0],p2[1]-p1[1])>W*1.5)return;
@@ -349,7 +349,7 @@ A.init.then(()=>{
     });
 
     // ── Star names ──
-    const starOp=show.stars&&fov<90?Math.min(1,(90-fov)/30):0;
+    const starOp=show.stars?0.9:0;
     STARS.forEach((s,i)=>{
       const el=starEls[i];if(starOp===0){el.style.opacity='0';return;}
       const pos=aladin.world2pix(s[1],s[2]);
