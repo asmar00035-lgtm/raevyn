@@ -4,31 +4,9 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
+  width: 100%;
+  height: 100%;
   background: #000;
   overflow: hidden;
-  width: 100vw;
-  height: 100vh;
-}
-
-#aladin-lite-div {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 1;
-}
-
-#aladin-lite-div canvas {
-  width: 100vw !important;
-  height: 100vh !important;
-}
-
-/* Hide Aladin branding */
-.aladin-logo,
-.aladin-cooFrame,
-.aladin-location,
-.aladin-fov {
-  display: none !important;
 }
